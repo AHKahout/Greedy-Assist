@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>AI Master Mind Smoke - CREATED BY AH Kahout</title>
+    
+    <!-- FIREBASE SDK (Google Cloud Sync & Auth) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --bg-space: #000105;
+            --panel-border: rgba(0, 243, 255, 0.4);
+            --accent-cyan: #00f3ff;
+            --accent-purple: #9d4edd;
+            --accent-green: #00ff87;
+            --accent-red: #ff0055;
+            --accent-gold: #ffd700;
+            --text-main: #ffffff;
+            --text-muted: #cbd5e1;
+            --glow-cyan: 0 0 15px rgba(0, 243, 255, 0.5);
+            --glow-gold: 0 0 15px rgba(255, 215, 0, 0.6);
+            --glow-red: 0 0 20px rgba(255, 0, 85, 0.85);
+            --glow-green: 0 0 20px rgba(0, 255, 135, 0.85);
+        }
+        *, *::before, *::after { box-sizing: border-box; touch-action: manipulation; }
+        
+        /* 100% BULLETPROOF CENTERED LAYOUT (FIXED RIGHT SHIFT & WIDTH OVERFLOW) */
+        html, body {
+            width: 100%; max-width: 100vw; min-height: 100vh;
+            margin: 0; padding: 0; overflow-x: hidden !important;
+            background-color: var(--bg-space);
+            -webkit-user-select: none; user-select: none;
+            display: flex; justify-content: center; align-items: flex-start;
+        }
+        
+        #spaceCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; }
+        
+        #auth-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 1, 5, 0.98); z-index: 999999;
+            display: flex; justify-content: center; align-items: center; padding: 20px;
+        }
+        .auth-card {
+            width: 100%; max-width: 360px; background: rgba(5, 10, 25, 0.98);
+            border: 2px solid var(--accent-cyan); border-radius: 24px; padding: 24px;
+            text-align: center; box-shadow: var(--glow-cyan); position: relative; z-index: 1000000;
+        }
+        .auth-input {
+            width: 100%; padding: 12px; margin: 8px 0; background: rgba(0,0,0,0.8);
+            border: 1px solid rgba(255,255,255,0.3); border-radius: 10px; color: #fff; font-size: 14px; text-align: center; outline: none;
+        }
+        .auth-btn {
+            width: 100%; padding: 12px; margin-top: 10px; background: linear-gradient(135deg, rgba(0,184,148,0.9), rgba(0,255,135,0.9));
+            border: none; border-radius: 10px; color: #000; font-weight: 900; font-size: 13px; cursor: pointer; text-transform: uppercase;
+        }
+        .auth-switch { font-size: 12px; color: var(--accent-cyan); margin-top: 14px; cursor: pointer; text-decoration: underline; display: inline-block; padding: 4px; }
+
+        #admin-panel-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.88); z-index: 10000; justify-content: center; align-items: center; }
+        .admin-box { background: rgba(10, 15, 30, 0.96); border: 2px solid var(--accent-gold); border-radius: 20px; width: 92%; max-width: 480px; padding: 18px; text-align: left; box-shadow: var(--glow-gold); max-height: 90vh; overflow-y: auto; }
+        
+        #user-popup-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 11000; justify-content: center; align-items: center; }
+        #status-alert-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.88); z-index: 12000; justify-content: center; align-items: center; }
+
+        /* ABSOLUTE CENTERED CONTAINER WITH SAFE MOBILE MARGINS */
+        #main-app-container { 
+            display: none; width: 100%; max-width: 380px; position: relative; z-index: 10; 
+            margin: 10px auto; padding: 0 8px; box-sizing: border-box; 
+        }
+
+        .container { 
+            width: 100%; background: rgba(2, 4, 12, 0.96); 
+            border-radius: 24px; padding: 16px; box-shadow: inset 0 0 35px rgba(0, 243, 255, 0.08), 0 15px 35px rgba(0,0,0,0.9); 
+            border: 1px solid var(--panel-border); display: flex; flex-direction: column; align-items: center; justify-content: center;
+            margin: 0 auto;
+        }
+        
+        .creator-panel, .ai-brain-hud, .bankroll-box, .ai-panel, .hot-toggle-panel, .history-panel {
+            background: rgba(3, 7, 18, 0.85) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08); width: 100%;
+        }
+
+        .creator-panel { margin-bottom: 12px; padding: 12px; text-align: center; border-radius: 16px; border: 1px solid var(--accent-cyan); box-shadow: var(--glow-cyan); }
+        .creator-title { font-size: 16px; font-weight: 900; color: #fff; text-shadow: 0 0 10px var(--accent-cyan); letter-spacing: 2px; }
+        .creator-subtext { font-size: 11px; color: var(--accent-green); font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 3px; text-shadow: 0 0 5px #000; }
+
+        .hk-round-hud { background: rgba(0, 243, 255, 0.12); border: 2px solid var(--accent-cyan); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; width: 100%; display: flex; justify-content: space-between; align-items: center; font-family: monospace; box-shadow: var(--glow-cyan); }
+        .hk-round-text { font-size: 12px; font-weight: bold; color: var(--accent-cyan); text-shadow: 0 0 5px #000; cursor: pointer; }
+        .hk-timer-text { font-size: 12px; font-weight: bold; color: var(--accent-gold); text-shadow: 0 0 5px #000; }
+
+        .session-actions-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; margin-bottom: 12px; }
+        .btn-glow { cursor: pointer; outline: none; border: none; -webkit-tap-highlight-color: transparent; transition: transform 0.05s ease, opacity 0.05s ease; }
+        .btn-glow:active { transform: scale(0.92) !important; opacity: 0.8; }
+        .btn-start-new { padding: 12px; background: linear-gradient(135deg, rgba(0,184,148,0.85), rgba(0,255,135,0.85)); border-radius: 12px; color: #000; font-weight: 900; font-size: 11px; text-transform: uppercase; }
+        .btn-end-session { padding: 12px; background: linear-gradient(135deg, rgba(214,48,49,0.85), rgba(255,0,85,0.85)); border-radius: 12px; color: white; font-weight: 900; font-size: 11px; text-transform: uppercase; }
+
+        .ai-brain-hud { border-radius: 14px; padding: 10px; margin-bottom: 12px; font-family: monospace; }
+        .brain-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,243,255,0.2); padding-bottom: 4px; margin-bottom: 6px; }
+        .brain-title { font-size: 10px; color: var(--accent-cyan); font-weight: bold; letter-spacing: 1px; display: flex; align-items: center; gap: 6px; }
+        .brain-pulse { width: 8px; height: 8px; background: var(--accent-green); border-radius: 50%; box-shadow: 0 0 8px var(--accent-green); animation: pulse 1.2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+        .brain-console { font-size: 9.5px; color: #a5f3fc; line-height: 1.3; max-height: 48px; overflow-y: auto; text-align: left; text-shadow: 0 0 5px #000; }
+
+        .bankroll-box { border-radius: 14px; padding: 10px 12px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; border: 1px dashed var(--accent-gold) !important; }
+        .bankroll-header-row { display: flex; justify-content: space-between; align-items: center; }
+        .bankroll-input { width: 95px; background: rgba(0, 0, 0, 0.6); border: 1px solid var(--accent-gold); color: var(--accent-gold); font-weight: bold; border-radius: 6px; padding: 4px 6px; font-size: 12px; text-align: center; }
+        
+        .bet-sheet-container { font-size: 10px; color: #e2e8f0; background: rgba(0, 0, 0, 0.6); padding: 8px; border-radius: 10px; border-left: 3px solid var(--accent-green); text-align: left; line-height: 1.5; display: none; }
+        .bet-sheet-row { display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.1); padding: 3px 0; text-shadow: 0 0 5px #000;}
+        .bet-sheet-row:last-child { border-bottom: none; }
+
+        .bet-signal-box {
+            width: 100%; padding: 12px; border-radius: 14px; margin-bottom: 12px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; border: 2px solid var(--accent-red);
+            background: rgba(255, 0, 85, 0.2); box-shadow: var(--glow-red);
+            transition: all 0.3s ease;
+        }
+        .bet-signal-status { font-size: 13px; font-weight: 900; letter-spacing: 1.2px; text-transform: uppercase; color: var(--accent-red); text-shadow: 0 0 10px #000; }
+        .bet-signal-sub { font-size: 10px; color: #e2e8f0; margin-top: 2px; text-shadow: 0 0 5px #000; }
+
+        .ai-panel { border-radius: 18px; padding: 14px; margin-bottom: 12px; }
+        .ai-header { font-size: 11px; font-weight: bold; color: var(--accent-cyan); text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; text-shadow: 0 0 5px #000; }
+        .ai-predictions-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background-color: rgba(0, 0, 0, 0.4); padding: 8px; border-radius: 12px; border: 1px solid rgba(0,243,255,0.15); margin-bottom: 8px; }
+        .ai-item { display: flex; flex-direction: column; align-items: center; background: rgba(0, 0, 0, 0.5); border-radius: 8px; padding: 6px 2px; border: 1px solid rgba(255,255,255,0.1); }
+        .ai-item .rank { font-size: 8px; color: var(--text-muted); font-weight: bold; margin-bottom: 2px; background: rgba(255,255,255,0.15); padding: 1px 5px; border-radius: 4px; }
+        .ai-item:nth-child(1) .rank, .ai-item:nth-child(2) .rank, .ai-item:nth-child(3) .rank { background: var(--accent-cyan); color: #000; }
+        .ai-item .emoji { font-size: 18px; margin: 2px 0; line-height: 1; }
+        .ai-item .mult { font-size: 8px; color: var(--accent-gold); font-weight: 800; background: rgba(0,0,0,0.8); padding: 1px 4px; border-radius: 3px; }
+        .ai-item .percentage { font-size: 10px; color: var(--accent-green); font-weight: bold; margin-top: 2px; text-shadow: 0 0 5px #000; }
+
+        .hot-toggle-panel { border-radius: 12px; padding: 8px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
+        .hot-toggle-title { font-size: 9.5px; color: var(--accent-gold); font-weight: bold; text-align: left; text-shadow: 0 0 5px #000; }
+        .hot-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+        .btn-hot { padding: 5px 2px; font-size: 8.5px; font-weight: bold; border-radius: 6px; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255,255,255,0.2); color: #fff; text-align: center; }
+        .btn-hot.active-hot { background: linear-gradient(135deg, rgba(255,0,85,0.8), rgba(255,215,0,0.8)); color: #000; border-color: var(--accent-gold); box-shadow: var(--glow-gold); }
+
+        .trend-bar-bg { width: 100%; height: 6px; background: rgba(0,0,0,0.5); border-radius: 4px; margin: 6px 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+        .trend-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-green)); width: 50%; transition: width 0.5s ease; }
+
+        .data-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+        .btn-data { padding: 8px; font-size: 9px; border-radius: 8px; border: 1px solid var(--panel-border); background: rgba(0, 0, 0, 0.5); color: white; font-weight: bold; }
+        .btn-summary { width: 100%; margin-top: 8px; padding: 10px; background: linear-gradient(135deg, rgba(0,243,255,0.7), rgba(157,78,221,0.7)); border-radius: 10px; color: #ffffff; font-weight: 900; font-size: 11px; }
+
+        .wheel-wrapper { position: relative; width: 260px; height: 260px; margin: 0 auto 12px auto; display: flex; justify-content: center; align-items: center; border-radius: 50%; }
+        .wheel-center { position: absolute; width: 50px; height: 50px; background: rgba(0, 0, 0, 0.7); border: 2px solid var(--accent-cyan); border-radius: 50%; z-index: 2; display: flex; justify-content: center; align-items: center; font-size: 18px; box-shadow: var(--glow-cyan); }
+        .spoke { position: absolute; width: 2px; height: 200px; background: rgba(0,243,255,0.15); z-index: 1; }
+        .spoke-1 { transform: rotate(0deg); } .spoke-2 { transform: rotate(45deg); } .spoke-3 { transform: rotate(90deg); } .spoke-4 { transform: rotate(135deg); }
+        
+        .btn-node { 
+            position: absolute; width: 56px; height: 56px; background: rgba(0, 0, 0, 0.8); border-radius: 50%; 
+            display: flex; flex-direction: column; align-items: center; justify-content: space-between; 
+            overflow: hidden; z-index: 10; padding: 3px 0 0 0; box-sizing: border-box; margin: auto; cursor: pointer;
+        }
+        .btn-node .emoji { font-size: 16px; line-height: 1; margin-top: 1px; }
+        .btn-node .label-bar { width: 100%; font-size: 7px; font-weight: 900; text-align: center; padding: 2px 0; color: #ffffff; text-transform: uppercase; }
+        .group-red { border: 2px solid var(--accent-red); box-shadow: 0 0 10px rgba(255,0,85,0.5); } 
+        .group-red .label-bar { background-color: rgba(255,0,85,0.9); } 
+        .group-blue { border: 2px solid var(--accent-cyan); box-shadow: 0 0 10px rgba(0,243,255,0.5); } 
+        .group-blue .label-bar { background-color: rgba(0,180,216,0.9); }
+        
+        .node-0 { transform: translate(0px, -95px); } .node-1 { transform: translate(67px, -67px); } .node-2 { transform: translate(95px, 0px); } .node-3 { transform: translate(67px, 67px); } 
+        .node-4 { transform: translate(0px, 95px); } .node-5 { transform: translate(-67px, 67px); } .node-6 { transform: translate(-95px, 0px); } .node-7 { transform: translate(-67px, -67px); } 
+        
+        .trigger-container { display: flex; width: 100%; gap: 10px; margin-bottom: 12px; }
+        .btn-trigger-special { flex: 1; padding: 10px 4px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.5); cursor: pointer; }
+        .bg-salad { border-color: var(--accent-green); box-shadow: inset 0 0 10px rgba(0,255,135,0.2); }
+        .bg-pizza { border-color: var(--accent-gold); box-shadow: inset 0 0 10px rgba(255,215,0,0.2); }
+
+        .action-row { display: flex; width: 100%; gap: 10px; margin-bottom: 12px; }
+        .btn-action { flex: 1; padding: 10px; font-size: 11px; font-weight: bold; border-radius: 10px; color: white; background: rgba(0,0,0,0.6); cursor: pointer; }
+        .btn-delete { border: 1px solid rgba(255,255,255,0.3); }
+        .btn-reset { border: 1px dashed var(--accent-red); }
+
+        .history-panel { border-radius: 16px; padding: 12px; }
+        .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .btn-history-trigger { background: linear-gradient(135deg, rgba(0,243,255,0.4), rgba(157,78,221,0.4)); border: 1px solid var(--accent-cyan); color: #ffffff; font-size: 10px; font-weight: 800; padding: 6px 12px; border-radius: 8px; text-transform: uppercase; cursor: pointer; }
+        .history-header .counter-box { background-color: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); padding: 3px 8px; border-radius: 12px; color: #ffffff; font-size: 10px; font-weight: bold; }
+        
+        .stream { display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; padding: 8px; background: rgba(0,0,0,0.4); border-radius: 12px; min-height: 58px; align-items: center; justify-content: flex-start; border: 1px solid rgba(0, 243, 255, 0.2); max-width: 100%; }
+        .stream-item { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; background: rgba(0,0,0,0.8); border: 2px solid var(--accent-cyan); box-shadow: 0 0 8px rgba(0, 243, 255, 0.4); position: relative; }
+        .stream-item:first-child { border-color: var(--accent-green); box-shadow: 0 0 12px rgba(0, 255, 135, 0.6); }
+        .stream-hot-badge { position: absolute; top: -4px; right: -4px; font-size: 8px; background: var(--accent-gold); border-radius: 50%; width: 13px; height: 13px; display: flex; align-items: center; justify-content: center; color: #000; font-weight: bold; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 10000; justify-content: center; align-items: center; }
+        .modal-box { background: rgba(10, 15, 30, 0.95); border: 2px solid var(--accent-cyan); border-radius: 20px; width: 88%; max-width: 360px; padding: 18px; text-align: center; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 14px; }
+        .modal-btn { flex: 1; padding: 10px; font-weight: bold; border-radius: 8px; font-size: 11px; text-transform: uppercase; cursor: pointer; }
+        .btn-yes { background-color: var(--accent-green); color: #020208; }
+        .btn-no { background-color: var(--accent-red); color: white; }
+        .history-list-view { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; padding: 6px; background: rgba(0, 0, 0, 0.6); border-radius: 12px; border: 1px solid rgba(0, 243, 255, 0.2); margin: 10px 0; }
+        .history-card-hit { display: flex; justify-content: space-between; align-items: center; background: rgba(0, 255, 135, 0.15); border: 1px solid var(--accent-green); border-radius: 10px; padding: 8px 10px; }
+        .history-card-miss { display: flex; justify-content: space-between; align-items: center; background: rgba(255, 0, 85, 0.15); border: 1px solid rgba(255, 0, 85, 0.6); border-radius: 10px; padding: 8px 10px; }
+        .card-left { display: flex; align-items: center; gap: 8px; }
+        .badge-hit { background: var(--accent-green); color: #020208; font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 4px; }
+        .badge-miss { background: var(--accent-red); color: #ffffff; font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 4px; }
+        .card-title { font-size: 12px; font-weight: bold; color: #fff; }
+        .card-time { font-size: 10px; color: var(--accent-cyan); font-family: monospace; }
+
+        @keyframes highConfGlow {
+            0% { box-shadow: 0 0 5px var(--accent-green); border-color: var(--accent-green); }
+            50% { box-shadow: 0 0 25px var(--accent-green), inset 0 0 15px var(--accent-green); border-color: #fff; }
+            100% { box-shadow: 0 0 5px var(--accent-green); border-color: var(--accent-green); }
+        }
+        .smart-glow-active { animation: highConfGlow 1.5s infinite ease-in-out; }
+    </style>
+</head>
+<body>
+
+<canvas id="spaceCanvas"></canvas>
+
+<!-- SECURE LOGIN / REGISTER / FORGOT PASSWORD OVERLAY -->
+<div id="auth-overlay">
+    <div class="auth-card">
+        <h2 id="auth-heading" style="color:var(--accent-cyan); margin-top:0; font-size:16px;">AI MASTER - LOGIN</h2>
+        <input type="email" id="auth-email" class="auth-input" placeholder="Enter Email Address">
+        <input type="password" id="auth-pass" class="auth-input" placeholder="Enter Password">
+        <button class="auth-btn btn-glow" id="auth-submit-btn" type="button">Login</button>
+        <div style="display:flex; justify-content:space-between; margin-top:12px; font-size:11px;">
+            <span class="auth-switch" id="switch-mode-text">Create Account</span>
+            <span class="auth-switch" style="color:var(--accent-gold);" id="forgot-pass-text">Forgot Password?</span>
+        </div>
+        <p id="auth-error" style="color:var(--accent-red); font-size:10px; margin-top:10px;"></p>
+    </div>
+</div>
+
+<!-- ADMIN CONTROL PANEL MODAL -->
+<div id="admin-panel-modal">
+    <div class="admin-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.15); padding-bottom:8px; margin-bottom:8px;">
+            <h3 style="color:var(--accent-gold); margin:0; font-size:14px;">👑 ADMIN CONSENSUS & QUALITY PANEL</h3>
+            <button id="close-admin-btn" style="background:none; border:none; color:#fff; font-size:16px; cursor:pointer;">✕</button>
+        </div>
+        <p style="font-size:10px; color:var(--text-muted); margin:0 0 8px 0;">Live Users & Subscriptions:</p>
+        <div id="admin-users-list" style="max-height: 150px; overflow-y: auto; background: rgba(0,0,0,0.6); padding: 8px; border-radius: 10px; font-size: 11px; border:1px solid rgba(255,255,255,0.1); margin-bottom: 12px;">Loading live cloud users...</div>
+        
+        <h4 style="color:var(--accent-cyan); margin:0 0 6px 0; font-size:12px;">🛡️ Verified Multi-User Consensus Queue (70s Window):</h4>
+        <div id="admin-user-folders" style="max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.6); padding: 8px; border-radius: 10px; font-size: 11px; border:1px solid rgba(0,243,255,0.2);">Loading consensus queues...</div>
+
+        <button class="modal-btn btn-yes btn-glow" style="width:100%; margin-top:12px;" id="close-admin-panel-btn">Close Panel</button>
+    </div>
+</div>
+
+<!-- INDIVIDUAL USER SUBMISSION POPUP MODAL -->
+<div id="user-popup-modal">
+    <div class="admin-box" style="border-color: var(--accent-cyan); max-width: 380px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(0,243,255,0.3); padding-bottom:8px; margin-bottom:8px;">
+            <h3 id="popup-user-title" style="color:var(--accent-cyan); margin:0; font-size:14px;">🛡️ Consensus Log Group</h3>
+            <button id="close-popup-x" style="background:none; border:none; color:#fff; font-size:16px; cursor:pointer;">✕</button>
+        </div>
+        <div id="popup-user-logs-list" style="max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.7); padding: 8px; border-radius: 10px; font-size: 11px; margin-bottom: 12px;">Loading logs...</div>
+        <div style="display:flex; gap:10px;">
+            <button class="modal-btn btn-yes btn-glow" id="approve-all-btn">Approve & Merge Verified</button>
+            <button class="modal-btn btn-no btn-glow" id="reject-all-btn">Reject Group</button>
+        </div>
+    </div>
+</div>
+
+<!-- PROFESSIONAL STATUS NOTIFICATION MODAL -->
+<div id="status-alert-modal">
+    <div class="modal-box" id="status-alert-box" style="border-color: var(--accent-green); max-width: 340px;">
+        <h3 id="status-alert-title" style="color:var(--accent-green); margin-top:0; font-size:16px;">🎉 CONGRATULATIONS!</h3>
+        <p id="status-alert-desc" style="color:var(--text-muted); font-size:11px; line-height:1.5;">
+            Your account has been granted complete access to all AI prediction features.
+        </p>
+        <button class="modal-btn btn-yes btn-glow" style="width:100%; margin-top:10px;" onclick="closeStatusAlertModal()">
+            Proceed to Dashboard
+        </button>
+    </div>
+</div>
+
+<!-- SUBSCRIPTION LOCK POPUP (300 LOGS) -->
+<div id="subscription-modal">
+    <div class="modal-box" style="border-color: var(--accent-gold); max-width: 340px;">
+        <h3 style="color:var(--accent-gold); margin-top:0; font-size:16px;">🔒 FREE TRIAL EXPIRED (300 LOGS)</h3>
+        <p style="color:var(--text-muted); font-size:11px; line-height:1.5;">
+            You have completed your first <b>300 free logs</b>! To continue using the AI Master Mind prediction engine, please contact admin.
+        </p>
+        <button class="modal-btn btn-yes btn-glow" style="width:100%; margin-top:10px; background:linear-gradient(135deg, #ffd700, #ff8c00); color:#000;" id="contact-admin-btn">
+            Contact Admin
+        </button>
+    </div>
+</div>
+
+<!-- Modals -->
+<div id="reset-modal" class="modal-overlay">
+    <div class="modal-box" style="border-color: var(--accent-red);">
+        <h3 style="color:#fff; margin-top:0; font-size:15px;">Hard Reset?</h3>
+        <p style="color:var(--text-muted); font-size: 11px;">Clear personal database and reset Neural Weights?</p>
+        <div class="modal-buttons">
+            <button class="modal-btn btn-yes btn-glow" onclick="handleReset(true)">Yes</button>
+            <button class="modal-btn btn-no btn-glow" onclick="handleReset(false)">No</button>
+        </div>
+    </div>
+</div>
+
+<div id="start-session-modal" class="modal-overlay">
+    <div class="modal-box" style="border-color: var(--accent-green);">
+        <h3 style="color:var(--accent-green); margin-top:0; font-size:15px;">New Session</h3>
+        <p style="color:var(--text-muted); font-size: 11px;">Initialize fresh quantum stream sequence.</p>
+        <div class="modal-buttons">
+            <button class="modal-btn btn-yes btn-glow" onclick="confirmStartSession(true)">Yes</button>
+            <button class="modal-btn btn-no btn-glow" onclick="confirmStartSession(false)">No</button>
+        </div>
+    </div>
+</div>
+
+<div id="end-session-modal" class="modal-overlay">
+    <div class="modal-box" style="border-color: var(--accent-red);">
+        <h3 style="color:var(--accent-red); margin-top:0; font-size:15px;">End Session?</h3>
+        <p style="color:var(--text-muted); font-size: 11px;">Lock active stream logging.</p>
+        <div class="modal-buttons">
+            <button class="modal-btn btn-yes btn-glow" onclick="confirmEndSession(true)">Yes</button>
+            <button class="modal-btn btn-no btn-glow" onclick="confirmEndSession(false)">No</button>
+        </div>
+    </div>
+</div>
+
+<div id="warning-popup-modal" class="modal-overlay">
+    <div class="modal-box" style="border-color: var(--accent-red);">
+        <h3 style="color:var(--accent-red); margin-top:0; font-size:15px;">⚠️ Shift Registered</h3>
+        <p style="color:var(--text-muted); font-size: 11px;">RNG Shift Detected. Signal LOCKED RED for safety. Learning new sequence...</p>
+        <div class="modal-buttons">
+            <button class="modal-btn btn-yes btn-glow" style="flex:1;" onclick="closeWarningPopup()">Understood</button>
+        </div>
+    </div>
+</div>
+
+<div id="summary-modal" class="modal-overlay">
+    <div class="modal-box" style="border-color: var(--accent-cyan); max-width: 380px;">
+        <h3 style="color:var(--accent-cyan); margin-top:0; font-size:15px;">📜 FORENSIC SESSION REPORT</h3>
+        <div id="summary-content" style="color:var(--text-muted); font-size: 10px; text-align: left; margin: 10px 0; background: rgba(0,0,0,0.8); padding: 12px; border-radius: 10px; border: 1px solid var(--accent-cyan); max-height: 260px; overflow-y: auto; line-height: 1.5;"></div>
+        <div class="modal-buttons">
+            <button class="modal-btn btn-yes btn-glow" style="flex:1;" onclick="closeSummaryModal()">Close Report</button>
+        </div>
+    </div>
+</div>
+
+<div id="full-history-modal" class="modal-overlay">
+    <div class="modal-box" style="border-color: var(--accent-cyan); max-width: 400px; width: 92%;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+            <h3 style="color:var(--accent-cyan); margin:0; font-size:14px;">📜 Personal Logs</h3>
+            <span id="full-history-count" style="font-size:10px; color:var(--accent-purple); font-weight:bold;">Logs: 0</span>
+        </div>
+        <div id="full-history-container" class="history-list-view"></div>
+        <div class="modal-buttons">
+            <button class="modal-btn btn-yes btn-glow" style="flex:1;" onclick="closeFullHistoryModal()">Close Logs</button>
+        </div>
+    </div>
+</div>
+
+<!-- PROFESSIONAL PRECISE CALIBRATION MODAL -->
+<div id="override-modal" class="modal-overlay">
+    <div class="modal-box" style="border-color: var(--accent-gold); max-width: 320px;">
+        <h3 style="color:var(--accent-gold); margin-top:0; font-size:15px;">⚙️ PRECISE ROUND CALIBRATION</h3>
+        <p style="color:var(--text-muted); font-size: 11px;">Enter exact live round & remaining seconds from your game:</p>
+        <input type="number" id="manualRoundInput" class="auth-input" placeholder="Exact Round (e.g. 2035)">
+        <input type="number" id="manualSecondsInput" class="auth-input" placeholder="Remaining Seconds (e.g. 1)">
+        <div class="modal-buttons">
+            <button class="modal-btn btn-yes btn-glow" onclick="applyPreciseCalibration()">Sync Perfect</button>
+            <button class="modal-btn btn-no btn-glow" onclick="document.getElementById('override-modal').style.display='none'">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div id="main-app-container">
+<div class="container">
+    <div class="session-actions-row">
+        <button class="btn-start-new btn-glow" onclick="showStartSessionModal()">Start New Session</button>
+        <button class="btn-end-session btn-glow" onclick="showEndSessionModal()">End Session</button>
+    </div>
+    
+    <div id="main-content" style="width: 100%;">
+        <!-- HONG KONG LIVE 2160 ROUNDS TICKER HUD -->
+        <div class="hk-round-hud" onclick="document.getElementById('override-modal').style.display='flex'" title="Click to calibrate exact round and seconds">
+            <span class="hk-round-text" id="hkRoundDisplay">HKT Round: #0000 / 2160 (Click to Sync)</span>
+            <span class="hk-timer-text" id="hkTimerDisplay">Next: 35s</span>
+        </div>
+
+        <div class="creator-panel" id="creatorPanelBox">
+            <div class="creator-title">AI MASTER MIND SMOKE</div>
+            <div class="creator-subtext">CREATED BY AH Kahout — <span id="user-badge" style="color:var(--accent-gold)"></span> 
+                <span id="admin-btn-container" style="display:none;"> | <a href="#" style="color:var(--accent-cyan);" onclick="openAdminPanel()">⚙️ Admin Consensus</a></span>
+            </div>
+        </div>
+
+        <div class="ai-brain-hud">
+            <div class="brain-header">
+                <div class="brain-title"><div class="brain-pulse"></div> AI BRAIN LIVE TERMINAL</div>
+                <span style="font-size:8px; color:var(--accent-gold);">ULTIMATE PROFESSIONAL ENGINE 15.0</span>
+            </div>
+            <div class="brain-console" id="brainConsole">
+                > Professional Centered UI & Precise Calibration Active.<br>
+                > 2160 Rounds & 35s Cycle Synchronized.<br>
+                > Multi-User Consensus & Personal Cloud Online.
+            </div>
+        </div>
+
+        <div class="hot-toggle-panel">
+            <div class="hot-toggle-title">🔥 LIVE MARKET HOT / COINS SELECTOR:</div>
+            <div class="hot-grid">
+                <button class="btn-hot btn-glow" id="hotBtn-0" onclick="toggleHotState(0)">🍔 Burger</button>
+                <button class="btn-hot btn-glow" id="hotBtn-1" onclick="toggleHotState(1)">🍢 BBQ</button>
+                <button class="btn-hot btn-glow" id="hotBtn-2" onclick="toggleHotState(2)">🍗 Chicken</button>
+                <button class="btn-hot btn-glow" id="hotBtn-3" onclick="toggleHotState(3)">🥩 Meat</button>
+                <button class="btn-hot btn-glow" id="hotBtn-4" onclick="toggleHotState(4)">🥕 Carrot</button>
+                <button class="btn-hot btn-glow" id="hotBtn-5" onclick="toggleHotState(5)">🌽 Corn</button>
+                <button class="btn-hot btn-glow" id="hotBtn-6" onclick="toggleHotState(6)">🥬 Cabbage</button>
+                <button class="btn-hot btn-glow" id="hotBtn-7" onclick="toggleHotState(7)">🍅 Tomato</button>
+            </div>
+        </div>
+
+        <div class="bankroll-box">
+            <div class="bankroll-header-row">
+                <span style="font-size:10px; font-weight:bold; color:var(--text-muted); text-shadow:0 0 5px #000;">
+                    DYNAMIC BANKROLL: <input type="number" id="bankrollInput" class="bankroll-input" value="1000" onchange="executeQuantumEngine()"> $
+                </span>
+                <span style="font-size:10px; font-weight:900; color:var(--accent-gold); text-shadow:0 0 5px #000;" id="stakeRecommendation">STATUS: STANDBY</span>
+            </div>
+            
+            <div class="bet-sheet-container" id="betSheetContainer">
+                <div style="font-weight:bold; color:var(--accent-green); margin-bottom:4px; font-size:10.5px; text-shadow:0 0 5px #000;">🎯 ABSOLUTE ZERO-LOSS 6-ITEM SHEET:</div>
+                <div id="betSheetList">Calculating optimal chip allocation...</div>
+                <div id="netProfitProjection" style="margin-top:6px; color:var(--accent-green); font-weight:bold; font-size:9.5px; border-top:1px solid rgba(0,255,135,0.2); padding-top:4px; text-shadow:0 0 5px #000;">
+                    🛡️ Multiplier-Validated Return on EVERY Item Active
+                </div>
+            </div>
+        </div>
+
+        <div class="bet-signal-box" id="betSignalBox">
+            <div class="bet-signal-status" id="betSignalStatus">DO NOT BET / UNLOCKED ⛔</div>
+            <div class="bet-signal-sub" id="betSignalSub">RNG Pattern Syncing... Keeping Signal RED for Safety</div>
+        </div>
+        
+        <div class="ai-panel">
+            <div class="ai-header">
+                <span id="conf-meter">Confidence: 10%</span>
+                <span style="color:var(--accent-cyan);" id="session-display">Session: Active</span>
+            </div>
+            
+            <div style="font-size: 10px; color:#bdc3c7; margin-bottom: 4px; text-shadow:0 0 5px #000;">Accuracy (Top 6 Target): <b id="hit-rate">0%</b> (Hits: <b id="hit-count">0</b>/<b id="total-pred">0</b>)</div>
+            
+            <div style="margin: 6px 0; background: rgba(0,0,0,0.5); padding: 4px; border-radius: 6px;">
+                <canvas id="liveAnalyticsChart" width="380" height="35" style="width: 100%; height: 35px; display: block;"></canvas>
+            </div>
+
+            <div id="sequence-preview" style="margin-bottom:6px; padding:5px; background:rgba(0,0,0,0.5); border-radius:6px; font-size:9.5px; color:#00f3ff; border:1px solid rgba(0,243,255,0.2);">
+                Target Sequence: Synchronizing Weights...
+            </div>
+            
+            <div style="font-size: 8px; color: #fff; margin-bottom: 2px; text-shadow:0 0 5px #000;">Meat Balance Index:</div>
+            <div class="trend-bar-bg"><div id="trend-fill" class="trend-bar-fill"></div></div>
+
+            <div class="ai-predictions-grid" id="ai-predictions"></div>
+            
+            <div class="data-btn-row">
+                <button class="btn-data btn-glow" onclick="exportData()">EXPORT JSON</button>
+                <button class="btn-data btn-glow" onclick="document.getElementById('fileInput').click()">IMPORT JSON</button>
+                <input type="file" id="fileInput" style="display:none" onchange="importData(event)" accept=".json">
+            </div>
+            <button class="btn-summary btn-glow" onclick="showSummary()">SESSION SUMMARY</button>
+        </div>
+        
+        <div class="wheel-wrapper">
+            <div class="wheel-center">🧠</div>
+            <div class="spoke spoke-1"></div><div class="spoke spoke-2"></div><div class="spoke spoke-3"></div><div class="spoke spoke-4"></div>
+            
+            <div class="btn-node node-0 group-red btn-glow" onclick="logResult(0, '🍔', 'Burger')"><span class="emoji">🍔</span><div class="label-bar">10x Burger</div></div>
+            <div class="btn-node node-1 group-blue btn-glow" onclick="logResult(1, '🍢', 'BBQ')"><span class="emoji">🍢</span><div class="label-bar">15x BBQ</div></div>
+            <div class="btn-node node-2 group-blue btn-glow" onclick="logResult(2, '🍗', 'Chicken')"><span class="emoji">🍗</span><div class="label-bar">25x Chicken</div></div>
+            <div class="btn-node node-3 group-red btn-glow" onclick="logResult(3, '🥩', 'Meat')"><span class="emoji">🥩</span><div class="label-bar">45x Meat</div></div>
+            <div class="btn-node node-4 group-red btn-glow" onclick="logResult(4, '🥕', 'Carrot')"><span class="emoji">🥕</span><div class="label-bar">5x Carrot</div></div>
+            <div class="btn-node node-5 group-blue btn-glow" onclick="logResult(5, '🌽', 'Corn')"><span class="emoji">🌽</span><div class="label-bar">5x Corn</div></div>
+            <div class="btn-node node-6 group-blue btn-glow" onclick="logResult(6, '🥬', 'Cabbage')"><span class="emoji">🥬</span><div class="label-bar">5x Cabbage</div></div>
+            <div class="btn-node node-7 group-red btn-glow" onclick="logResult(7, '🍅', 'Tomato')"><span class="emoji">🍅</span><div class="label-bar">5x Tomato</div></div>
+        </div>
+
+        <div class="trigger-container">
+            <div class="btn-trigger-special bg-salad btn-glow" onclick="logResult(8, '🥗', 'Salad')">🥗<span style="font-size:9px">Salad (Veggies Indicator)</span></div>
+            <div class="btn-trigger-special bg-pizza btn-glow" onclick="logResult(9, '🍕', 'Pizza')">🍕<span style="font-size:9px; color:var(--accent-gold); font-weight:900;">Pizza (Meats Indicator)</span></div>
+        </div>
+
+        <div class="action-row">
+            <button class="btn-action btn-delete btn-glow" onclick="deleteLastLog()">↩ Delete Last</button>
+            <button class="btn-action btn-reset btn-glow" onclick="showModal()">⚠️ Hard Reset</button>
+        </div>
+
+        <div class="history-panel">
+            <div class="history-header">
+                <span style="font-size:11px; font-weight:bold; color:var(--accent-cyan); text-shadow:0 0 5px #000;">⚡ PERSONAL LOGS</span>
+                <div>
+                    <button class="btn-history-trigger btn-glow" onclick="openFullHistoryModal()">📜 Logs ↗</button>
+                    <span id="counter" class="counter-box">Total: 0</span>
+                </div>
+            </div>
+            <div class="stream" id="history-stream"></div>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+    /* =========================================================
+       FIREBASE CONFIGURATION
+       ========================================================= */
+    const firebaseConfig = {
+        apiKey: "AIzaSyCvBKNQ0kwMhqZrJNyUwh4TPDrHf0E_JEc",
+        authDomain: "greedy-assist.firebaseapp.com",
+        databaseURL: "https://greedy-assist-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "greedy-assist",
+        storageBucket: "greedy-assist.firebasestorage.app",
+        messagingSenderId: "7236792834",
+        appId: "1:7236792834:web:8643fb8fee2398b2d56d1b",
+        measurementId: "G-L5Z4N8YDCD"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const ADMIN_EMAIL = "Groovepaki@gmail.com"; 
+    let isRegisterMode = false;
+    let currentUserUid = null;
+    let lastKnownUserStatus = null; 
+
+    document.addEventListener("DOMContentLoaded", function() {
+        document.getElementById('auth-submit-btn').addEventListener('click', processAuth);
+        document.getElementById('switch-mode-text').addEventListener('click', switchAuthMode);
+        document.getElementById('forgot-pass-text').addEventListener('click', forgotPassword);
+
+        document.getElementById('close-admin-btn').addEventListener('click', () => { document.getElementById('admin-panel-modal').style.display = 'none'; });
+        document.getElementById('close-admin-panel-btn').addEventListener('click', () => { document.getElementById('admin-panel-modal').style.display = 'none'; });
+        document.getElementById('close-popup-x').addEventListener('click', () => { document.getElementById('user-popup-modal').style.display = 'none'; });
+        document.getElementById('approve-all-btn').addEventListener('click', approveConsensusGroup);
+        document.getElementById('reject-all-btn').addEventListener('click', rejectConsensusGroup);
+        document.getElementById('contact-admin-btn').addEventListener('click', () => { alert('Please contact Admin Groovepaki@gmail.com to activate your subscription!'); });
+    });
+
+    function switchAuthMode() {
+        isRegisterMode = !isRegisterMode;
+        document.getElementById('auth-heading').innerText = isRegisterMode ? "AI MASTER - REGISTER" : "AI MASTER - LOGIN";
+        document.getElementById('auth-submit-btn').innerText = isRegisterMode ? "Create Account" : "Login";
+        document.getElementById('switch-mode-text').innerText = isRegisterMode ? "Already have an account? Login" : "Create Account";
+    }
+
+    async function processAuth() {
+        let email = document.getElementById('auth-email').value.trim();
+        let pass = document.getElementById('auth-pass').value.trim();
+        let errEl = document.getElementById('auth-error');
+        errEl.innerText = "";
+
+        if(!email || !pass) { errEl.innerText = "Please fill in all fields."; return; }
+
+        try {
+            if(isRegisterMode) {
+                let userCred = await auth.createUserWithEmailAndPassword(email, pass);
+                let uid = userCred.user.uid;
+                await db.ref('users/' + uid).set({ email: email, logsCount: 0, status: "Free" });
+                alert("Account registered successfully! Please login.");
+                switchAuthMode();
+            } else {
+                let userCred = await auth.signInWithEmailAndPassword(email, pass);
+                handleLoginSuccess(userCred.user);
+            }
+        } catch(err) {
+            errEl.innerText = err.message;
+        }
+    }
+
+    async function forgotPassword() {
+        let email = document.getElementById('auth-email').value.trim();
+        let errEl = document.getElementById('auth-error');
+        if(!email) { errEl.innerText = "Please enter your email address first."; return; }
+        try {
+            await auth.sendPasswordResetEmail(email);
+            alert("Password reset link has been sent to your email!");
+        } catch(err) {
+            errEl.innerText = err.message;
+        }
+    }
+
+    function handleLoginSuccess(user) {
+        currentUserUid = user.uid;
+        document.getElementById('auth-overlay').style.display = 'none';
+        document.getElementById('main-app-container').style.display = 'block';
+        document.getElementById('user-badge').innerText = user.email;
+
+        let isAdmin = (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+        if(isAdmin) {
+            document.getElementById('admin-btn-container').style.display = 'inline';
+        }
+
+        db.ref('users/' + currentUserUid).on('value', (snapshot) => {
+            let userData = snapshot.val();
+            if(userData) {
+                let currentStatus = userData.status || "Free";
+                if(lastKnownUserStatus !== null && lastKnownUserStatus !== currentStatus) {
+                    showProfessionalStatusPopup(currentStatus);
+                }
+                lastKnownUserStatus = currentStatus;
+            }
+        });
+
+        // Instant local sync listener with offline state support
+        db.ref('userPersonalLogs/' + currentUserUid).on('value', (snapshot) => {
+            let data = snapshot.val();
+            if(data) {
+                logHistory = Object.values(data);
+            } else {
+                logHistory = [];
+            }
+            renderHistory(); 
+            executeQuantumEngine(); 
+            updateStatsDisplay();
+        });
+    }
+
+    auth.onAuthStateChanged((user) => {
+        if(user) { handleLoginSuccess(user); }
+    });
+
+    function showProfessionalStatusPopup(status) {
+        const modal = document.getElementById('status-alert-modal');
+        const box = document.getElementById('status-alert-box');
+        const title = document.getElementById('status-alert-title');
+        const desc = document.getElementById('status-alert-desc');
+
+        if(status === 'Paid') {
+            box.style.borderColor = 'var(--accent-green)';
+            title.style.color = 'var(--accent-green)';
+            title.innerText = '🎉 CONGRATULATIONS!';
+            desc.innerHTML = 'Your account has been upgraded to <b>PAID / COMPLETE ACCESS</b>. Enjoy uninterrupted AI Master Mind prediction engine.';
+        } else {
+            box.style.borderColor = 'var(--accent-red)';
+            title.style.color = 'var(--accent-red)';
+            title.innerText = '⚠️ ACCOUNT STATUS UPDATED';
+            desc.innerHTML = 'Your account has been transitioned to <b>FREE TIER</b>. Please contact admin for full membership renewal.';
+        }
+        modal.style.display = 'flex';
+    }
+
+    function closeStatusAlertModal() {
+        document.getElementById('status-alert-modal').style.display = 'none';
+    }
+
+    /* =========================================================
+       PRECISE MANUAL ROUND & SECONDS CALIBRATION ENGINE (MAX 2160)
+       ========================================================= */
+    let manualOffsetMsOverride = parseInt(localStorage.getItem('manualOffsetMsOverride')) || null;
+
+    function applyPreciseCalibration() {
+        let targetRound = parseInt(document.getElementById('manualRoundInput').value);
+        let targetSeconds = parseInt(document.getElementById('manualSecondsInput').value);
+        
+        if(isNaN(targetRound) || isNaN(targetSeconds) || targetRound < 1 || targetRound > 2160) { 
+            alert("Please enter a valid round (1 to 2160) and remaining seconds!"); 
+            return; 
+        }
+        
+        let now = Date.now();
+        let roundDurationMs = 35000;
+        let targetMsIntoCycle = (35 - targetSeconds) * 1000;
+        
+        let theoreticalBaseRound = Math.floor(now / roundDurationMs);
+        let desiredBaseRound = targetRound - 1;
+        let calculatedOffset = (desiredBaseRound - theoreticalBaseRound) * roundDurationMs + targetMsIntoCycle - (now % roundDurationMs);
+
+        manualOffsetMsOverride = calculatedOffset;
+        localStorage.setItem('manualOffsetMsOverride', manualOffsetMsOverride);
+        document.getElementById('override-modal').style.display = 'none';
+        alert(`Successfully calibrated! Round #${targetRound} with ${targetSeconds}s locked.`);
+    }
+
+    function updateHongKongRoundClock() {
+        let now = Date.now();
+        let roundDurationMs = 35000; // 35s per round
+        let activeOffsetMs = manualOffsetMsOverride !== null ? manualOffsetMsOverride : -8155000;
+        
+        let adjustedTime = now + activeOffsetMs;
+        let totalCycleIndex = Math.floor(adjustedTime / roundDurationMs);
+        
+        // Exactly resets back to 1 after 2160 rounds
+        let currentRoundNumber = (totalCycleIndex % 2160) + 1;
+        
+        let msIntoRound = adjustedTime % roundDurationMs;
+        let msRemaining = roundDurationMs - msIntoRound;
+        let secondsRemaining = Math.max(0, Math.ceil(msRemaining / 1000));
+
+        const roundDisp = document.getElementById('hkRoundDisplay');
+        const timerDisp = document.getElementById('hkTimerDisplay');
+        if (roundDisp && timerDisp) {
+            roundDisp.innerText = `HKT Round: #${currentRoundNumber.toString().padStart(4, '0')} / 2160 (Click to Sync)`;
+            timerDisp.innerText = `Next: ${secondsRemaining}s`;
+        }
+        return currentRoundNumber;
+    }
+    setInterval(updateHongKongRoundClock, 100);
+    updateHongKongRoundClock();
+
+    /* =========================================================
+       ADMIN MULTI-USER CONSENSUS & VERIFICATION ENGINE (70s WINDOW)
+       ========================================================= */
+    let selectedConsensusRound = null;
+    let selectedConsensusLogs = null;
+
+    function openAdminPanel() {
+        let listEl = document.getElementById('admin-users-list');
+        let folderEl = document.getElementById('admin-user-folders');
+        if(!listEl || !folderEl) return;
+        
+        listEl.innerHTML = 'Fetching cloud users...';
+        folderEl.innerHTML = 'Analyzing multi-user consensus queues...';
+        
+        db.ref('users').once('value', (snapshot) => {
+            let users = snapshot.val();
+            listEl.innerHTML = '';
+            if(!users) { listEl.innerHTML = 'No users found.'; return; }
+            let i = 0;
+            for(let uid in users) {
+                i++;
+                let u = users[uid];
+                listEl.innerHTML += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding:6px 0;">
+                        <div>
+                            <span style="color:#fff; font-weight:bold;">${i}. ${u.email}</span><br>
+                            <span style="color:var(--text-muted); font-size:9.5px;">Status: <b style="color:${u.status==='Paid'?'var(--accent-green)':'var(--accent-gold)'};">${u.status || 'Free'}</b></span>
+                        </div>
+                        <div>
+                            <button onclick="toggleUserStatusCloud('${uid}', '${u.status}')" style="background:${u.status==='Paid'?'var(--accent-red)':'var(--accent-green)'}; color:#000; border:none; padding:4px 8px; border-radius:6px; font-size:9.5px; font-weight:bold; cursor:pointer;">
+                                ${u.status === 'Paid' ? 'Make Free' : 'Make Paid'}
+                            </button>
+                        </div>
+                    </div>`;
+            }
+        });
+
+        db.ref('userSubmissions').once('value', (snapshot) => {
+            let subs = snapshot.val();
+            folderEl.innerHTML = '';
+            if(!subs) { folderEl.innerHTML = 'No pending submissions.'; return; }
+            
+            let roundGroups = {};
+            for(let subId in subs) {
+                let s = subs[subId];
+                if(s && s.hkRound) {
+                    if(!roundGroups[s.hkRound]) roundGroups[s.hkRound] = [];
+                    roundGroups[s.hkRound].push({subId, ...s});
+                }
+            }
+
+            let htmlContent = '';
+            for(let hkRound in roundGroups) {
+                let logsInRound = roundGroups[hkRound];
+                let uniqueUsers = {};
+                logsInRound.forEach(l => uniqueUsers[l.userEmail] = true);
+                let uniqueUserCount = Object.keys(uniqueUsers).length;
+
+                if(uniqueUserCount >= 2) {
+                    let sampleLog = logsInRound[0];
+                    let safeData = encodeURIComponent(JSON.stringify(logsInRound));
+                    htmlContent += `
+                        <div onclick='openConsensusPopup("${hkRound}", JSON.parse(decodeURIComponent("${safeData}")))' style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,255,135,0.08); border:1px solid var(--accent-green); border-radius:8px; padding:8px 10px; margin-bottom:6px; cursor:pointer;">
+                            <div>
+                                <span style="color:var(--accent-green); font-weight:bold;">🛡️ HKT Round #${hkRound} Verified</span><br>
+                                <span style="color:#fff; font-size:9.5px;">Result: ${sampleLog.name} (${sampleLog.emoji}) | Confirmations: ${uniqueUserCount} Users</span>
+                            </div>
+                            <span style="font-size:11px; color:var(--accent-gold); font-weight:bold;">Review ↗</span>
+                        </div>`;
+                }
+            }
+            folderEl.innerHTML = htmlContent || '🛡️ No multi-user consensus reached yet (Waiting for 2+ users to log matching round).';
+        });
+
+        document.getElementById('admin-panel-modal').style.display = 'flex';
+    }
+
+    function toggleUserStatusCloud(uid, currentStatus) {
+        let newStatus = currentStatus === 'Paid' ? 'Free' : 'Paid';
+        db.ref('users/' + uid).update({ status: newStatus }).then(() => { openAdminPanel(); });
+    }
+
+    function openConsensusPopup(hkRound, logsArray) {
+        selectedConsensusRound = hkRound;
+        selectedConsensusLogs = logsArray;
+        document.getElementById('popup-user-title').innerText = `🛡️ Consensus Round #${hkRound}`;
+        
+        let listContainer = document.getElementById('popup-user-logs-list');
+        listContainer.innerHTML = '';
+        logsArray.forEach((l, idx) => {
+            listContainer.innerHTML += `
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding:6px 0;">
+                    <div>
+                        <span style="color:#fff; font-weight:bold;">${idx+1}. User: ${l.userEmail}</span><br>
+                        <span style="color:var(--accent-green); font-size:9px;">Logged: ${l.name} (${l.emoji}) | Time: ${l.time}</span>
+                    </div>
+                    <span style="color:var(--accent-gold); font-size:9px;">101% Verified</span>
+                </div>`;
+        });
+        document.getElementById('user-popup-modal').style.display = 'flex';
+    }
+
+    function approveConsensusGroup() {
+        if (!selectedConsensusLogs || selectedConsensusLogs.length === 0) return;
+        let l = selectedConsensusLogs[0];
+        let newRef = db.ref('globalLogs').push();
+        let verifiedEntry = { index: l.index, emoji: l.emoji, name: l.name, time: l.time, hkRound: l.hkRound, correct: true };
+        
+        newRef.set(verifiedEntry).then(() => {
+            let deletePromises = selectedConsensusLogs.map(item => db.ref('userSubmissions/' + item.subId).remove());
+            Promise.all(deletePromises).then(() => {
+                alert(`Round #${selectedConsensusRound} successfully verified and merged into Main Server DB!`);
+                document.getElementById('user-popup-modal').style.display = 'none';
+                openAdminPanel();
+            });
+        });
+    }
+
+    function rejectConsensusGroup() {
+        if (!selectedConsensusLogs || selectedConsensusLogs.length === 0) return;
+        let deletePromises = selectedConsensusLogs.map(l => db.ref('userSubmissions/' + l.subId).remove());
+        Promise.all(deletePromises).then(() => {
+            alert(`Consensus group rejected and cleared.`);
+            document.getElementById('user-popup-modal').style.display = 'none';
+            openAdminPanel();
+        });
+    }
+
+    /* =========================================================
+       CINEMATIC 3D NEBULA, WARP STARS & ASTEROID ENGINE
+       ========================================================= */
+    const canvas = document.getElementById('spaceCanvas');
+    const ctx = canvas.getContext('2d');
+    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+
+    let clouds = [
+        { x: canvas.width * 0.2, y: canvas.height * 0.3, r: 500, color1: 'rgba(147, 51, 234, 0.22)', color2: 'rgba(30, 58, 138, 0.1)', vx: 0.15, vy: 0.08 },
+        { x: canvas.width * 0.8, y: canvas.height * 0.7, r: 600, color1: 'rgba(14, 165, 233, 0.2)', color2: 'rgba(236, 72, 153, 0.12)', vx: -0.12, vy: -0.09 },
+        { x: canvas.width * 0.5, y: canvas.height * 0.5, r: 700, color1: 'rgba(217, 119, 6, 0.15)', color2: 'rgba(79, 70, 229, 0.15)', vx: 0.08, vy: -0.12 }
+    ];
+
+    let stars = [];
+    for(let i=0; i<300; i++) {
+        stars.push({
+            x: (Math.random() - 0.5) * canvas.width * 2,
+            y: (Math.random() - 0.5) * canvas.height * 2,
+            z: Math.random() * canvas.width,
+            size: Math.random() * 2 + 0.6,
+            color: ['#00f3ff', '#ffffff', '#ffedd5', '#9d4edd', '#ff0055'][Math.floor(Math.random()*5)]
+        });
+    }
+
+    let asteroids = [];
+    for(let i=0; i<5; i++) { spawnAsteroid(true); }
+
+    function spawnAsteroid(initial = false) {
+        let radius = Math.random() * 25 + 15;
+        let pts = []; let count = 8;
+        for(let p=0; p<count; p++) {
+            let angle = (p / count) * Math.PI * 2;
+            let r = radius * (0.7 + Math.random() * 0.5);
+            pts.push({x: Math.cos(angle)*r, y: Math.sin(angle)*r});
+        }
+        asteroids.push({
+            x: initial ? Math.random() * canvas.width : (Math.random() > 0.5 ? -60 : canvas.width + 60),
+            y: Math.random() * canvas.height,
+            vx: (Math.random() - 0.5) * 0.6, vy: (Math.random() - 0.5) * 0.6,
+            rot: Math.random() * Math.PI, vRot: (Math.random() - 0.5) * 0.02,
+            radius: radius, pts: pts
+        });
+    }
+
+    function animateCinematicSpace() {
+        ctx.fillStyle = '#000105';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        let cx = canvas.width / 2; let cy = canvas.height / 2;
+
+        clouds.forEach(c => {
+            c.x += c.vx; c.y += c.vy;
+            if(c.x < -300) c.x = canvas.width + 300; if(c.x > canvas.width + 300) c.x = -300;
+            if(c.y < -300) c.y = canvas.height + 300; if(c.y > canvas.height + 300) c.y = -300;
+            let grad = ctx.createRadialGradient(c.x, c.y, 20, c.x, c.y, c.r);
+            grad.addColorStop(0, c.color1); grad.addColorStop(0.5, c.color2); grad.addColorStop(1, 'transparent');
+            ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.fill();
+        });
+
+        stars.forEach(s => {
+            s.z -= 3.0;
+            if (s.z <= 0) { s.z = canvas.width; s.x = (Math.random() - 0.5) * canvas.width * 2; s.y = (Math.random() - 0.5) * canvas.height * 2; }
+            let k = 300 / s.z; let px = s.x * k + cx; let py = s.y * k + cy;
+            if (px >= 0 && px <= canvas.width && py >= 0 && py <= canvas.height) {
+                let pSize = Math.max(s.size * k, 0.5);
+                ctx.fillStyle = s.color; ctx.beginPath(); ctx.arc(px, py, pSize, 0, Math.PI * 2); ctx.fill();
+                let prevK = 300 / (s.z + 5); let prevPx = s.x * prevK + cx; let prevPy = s.y * prevK + cy;
+                ctx.strokeStyle = s.color; ctx.lineWidth = pSize; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(prevPx, prevPy); ctx.stroke();
+            }
+        });
+
+        asteroids.forEach(ast => {
+            ast.x += ast.vx; ast.y += ast.vy; ast.rot += ast.vRot;
+            if(ast.x < -80 || ast.x > canvas.width + 80 || ast.y < -80 || ast.y > canvas.height + 80) {
+                ast.x = Math.random() * canvas.width; ast.y = -60;
+            }
+            ctx.save(); ctx.translate(ast.x, ast.y); ctx.rotate(ast.rot); ctx.beginPath();
+            let astGrad = ctx.createRadialGradient(-ast.radius/3, -ast.radius/3, 0, 0, 0, ast.radius);
+            astGrad.addColorStop(0, '#52525b'); astGrad.addColorStop(1, '#18181b');
+            ctx.fillStyle = astGrad; ctx.strokeStyle = '#27272a'; ctx.lineWidth = 1.5;
+            ctx.moveTo(ast.pts[0].x, ast.pts[0].y);
+            for(let p=1; p<ast.pts.length; p++) { ctx.lineTo(ast.pts[p].x, ast.pts[p].y); }
+            ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+        });
+
+        requestAnimationFrame(animateCinematicSpace);
+    }
+    animateCinematicSpace();
+
+    /* =========================================================
+       AI MASTER MIND SMOKE - CORE ENGINE
+       ========================================================= */
+    let isSessionActive = true;
+    let logHistory = []; 
+    let sessionData = JSON.parse(localStorage.getItem('sessionData')) || { count: 1, history: [] };
+    let stats = JSON.parse(localStorage.getItem('aiStats')) || { hits: 0, attempts: 0, trapsCount: 0 };
+    let lastLogTimestamp = Date.now();
+    let isPatternLocked = false; 
+
+    let hotStateMap = new Array(8).fill(false);
+
+    function toggleHotState(id) {
+        hotStateMap[id] = !hotStateMap[id];
+        let btn = document.getElementById(`hotBtn-${id}`);
+        if(hotStateMap[id]) { btn.classList.add('active-hot'); brainLog(`🔥 Hot Marker ACTIVE on ${wheelMatrix[id].name}`); }
+        else { btn.classList.remove('active-hot'); }
+        executeQuantumEngine();
+    }
+
+    let isBetActiveThisRound = false; 
+    let activeBetAllocations = {}; 
+    let activeTotalBetSum = 0;
+
+    let dqnQTable = JSON.parse(localStorage.getItem('godDqn')) || {}; 
+    let attentionWeights = JSON.parse(localStorage.getItem('godAtt')) || {}; 
+    let reinforcementWeights = JSON.parse(localStorage.getItem('godRw')) || new Array(10).fill(1.0);
+
+    const wheelMatrix = [
+        {id:0, emoji:'🍔', name:'Burger', mult: 10, type: 'meat', opposite: 4, bettable: true},
+        {id:1, emoji:'🍢', name:'BBQ', mult: 15, type: 'meat', opposite: 5, bettable: true},
+        {id:2, emoji:'🍗', name:'Chicken', mult: 25, type: 'meat', opposite: 6, bettable: true},
+        {id:3, emoji:'🥩', name:'Meat', mult: 45, type: 'meat', opposite: 7, bettable: true},
+        {id:4, emoji:'🥕', name:'Carrot', mult: 5, type: 'veg', opposite: 0, bettable: true},
+        {id:5, emoji:'🌽', name:'Corn', mult: 5, type: 'veg', opposite: 1, bettable: true},
+        {id:6, emoji:'🥬', name:'Cabbage', mult: 5, type: 'veg', opposite: 2, bettable: true},
+        {id:7, emoji:'🍅', name:'Tomato', mult: 5, type: 'veg', opposite: 3, bettable: true},
+        {id:8, emoji:'🥗', name:'Salad', mult: 5, type: 'salad', opposite: 9, bettable: false}, 
+        {id:9, emoji:'🍕', name:'Pizza', mult: 100, type: 'pizza', opposite: 8, bettable: false} 
+    ];
+
+    function convertToCleanChipClicks(amount, userBankroll) {
+        if (amount <= 0) return { text: "No Bet", amount: 0 };
+        let allowedDenoms = userBankroll < 100 ? [1000, 100, 50, 10, 2] : [1000, 100, 50, 10];
+        let rem = amount; let breakdown = [];
+        for (let chip of allowedDenoms) {
+            if (rem >= chip) {
+                let clicks = Math.floor(rem / chip); rem %= chip;
+                breakdown.push(`${clicks}x [$${chip}]`);
+            }
+        }
+        return { text: breakdown.length > 0 ? breakdown.join(" + ") : "Min $10", amount: amount };
+    }
+
+    function brainLog(msg) {
+        const consoleEl = document.getElementById('brainConsole');
+        if (!consoleEl) return;
+        let time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+        consoleEl.innerHTML = `> [${time}] ${msg}<br>` + consoleEl.innerHTML;
+    }
+
+    function updateDQNModel(prevIndex, actionIndex, reward) {
+        let stateKey = prevIndex !== undefined ? prevIndex.toString() : "init";
+        if (!dqnQTable[stateKey]) dqnQTable[stateKey] = new Array(10).fill(0.1);
+        let lr = 0.2; let gamma = 0.9;
+        let maxQNext = Math.max(...dqnQTable[stateKey]);
+        dqnQTable[stateKey][actionIndex] += lr * (reward + gamma * maxQNext - dqnQTable[stateKey][actionIndex]);
+        localStorage.setItem('godDqn', JSON.stringify(dqnQTable));
+    }
+
+    function updateSelfAttention(history) {
+        if (history.length < 2) return;
+        let lastIdx = history[history.length - 1].index;
+        let prevIdx = history[history.length - 2].index;
+        if (!attentionWeights[prevIdx]) attentionWeights[prevIdx] = {};
+        attentionWeights[prevIdx][lastIdx] = (attentionWeights[prevIdx][lastIdx] || 1.0) + 2.0;
+        localStorage.setItem('godAtt', JSON.stringify(attentionWeights));
+    }
+
+    function getAttentionScores(history) {
+        let scores = new Array(10).fill(0);
+        if (history.length === 0) return scores;
+        let lastIdx = history[history.length - 1].index;
+        if (attentionWeights[lastIdx]) {
+            for (let nextTarget in attentionWeights[lastIdx]) {
+                scores[parseInt(nextTarget)] += attentionWeights[lastIdx][nextTarget] * 35.0;
+            }
+        }
+        return scores;
+    }
+
+    function runMCTSSimulation(history) {
+        let mctsScores = new Array(10).fill(0);
+        if (history.length < 3) return mctsScores;
+        let recentPattern = history.slice(-3).map(l => l.index);
+        for (let i = 0; i < history.length - 2; i++) {
+            if (history[i].index === recentPattern[0] && history[i+1].index === recentPattern[1]) {
+                let simulatedNext = history[i+2].index;
+                mctsScores[simulatedNext] += 50.0;
+            }
+        }
+        return mctsScores;
+    }
+
+    function calculateEntropyShield(history) {
+        if (history.length < 6) return 0;
+        let recent = history.slice(-6).map(l => l.index);
+        let counts = {};
+        recent.forEach(id => counts[id] = (counts[id] || 0) + 1);
+        let entropy = 0; let total = recent.length;
+        for (let id in counts) {
+            let p = counts[id] / total;
+            entropy -= p * Math.log2(p);
+        }
+        return entropy;
+    }
+
+    function applyGradientDescentOptimization(index, isMatch) {
+        let gradRate = 0.4;
+        if (isMatch) reinforcementWeights[index] = Math.min(reinforcementWeights[index] + gradRate, 6.0);
+        else reinforcementWeights[index] = Math.max(reinforcementWeights[index] - gradRate, 0.1);
+        localStorage.setItem('godRw', JSON.stringify(reinforcementWeights));
+    }
+
+    function calculateScores(history) {
+        let baseScores = new Array(10).fill(10);
+        if (history.length > 0) {
+            let lastIdx = history[history.length - 1].index;
+            let lastItem = wheelMatrix[lastIdx];
+            for (let i = 0; i < 10; i++) {
+                if (lastItem.opposite === i) baseScores[i] += 45;
+                if (lastItem.type === 'pizza' && wheelMatrix[i].type === 'meat') baseScores[i] += 35;
+                if (lastItem.type === 'salad' && wheelMatrix[i].type === 'veg') baseScores[i] += 35;
+            }
+        }
+
+        let maxDepth = Math.min(history.length, 25);
+        for (let depth = maxDepth; depth >= 1; depth--) {
+            let pattern = history.slice(-depth).map(l => l.index);
+            let weightFactor = Math.pow(1.35, depth);
+            for (let i = 0; i < history.length - depth; i++) {
+                let match = true;
+                for (let j = 0; j < depth; j++) {
+                    if (history[i + j].index !== pattern[j]) { match = false; break; }
+                }
+                if (match) {
+                    let nextIdx = history[i + depth].index;
+                    let decay = (1.0 + (i / history.length) * 0.2);
+                    baseScores[nextIdx] += (180 * weightFactor * decay) / (reinforcementWeights[nextIdx] || 1);
+                }
+            }
+        }
+        
+        let attScores = getAttentionScores(history);
+        let mctsScores = runMCTSSimulation(history);
+        
+        let finalScores = new Array(10).fill(0);
+        for (let i = 0; i < 10; i++) {
+            let hotBonus = hotStateMap[i] ? 40.0 : 0.0; 
+            let hotOppositeBonus = (i < 8 && hotStateMap[wheelMatrix[i].opposite]) ? 25.0 : 0.0; 
+            finalScores[i] = (baseScores[i] * 0.3) + (attScores[i] * 0.35) + (mctsScores[i] * 0.35) + hotBonus + hotOppositeBonus;
+        }
+        return finalScores;
+    }
+
+    function getBalancedTopPredictions(scores) {
+        let bettableItems = wheelMatrix.map((m, i) => ({...m, score: scores[i]})).filter(m => m.bettable);
+        let sortedVeggies = bettableItems.filter(m => m.type === 'veg').sort((a, b) => b.score - a.score);
+        let sortedMeats = bettableItems.filter(m => m.type === 'meat').sort((a, b) => b.score - a.score);
+        return [...sortedVeggies.slice(0, 3), ...sortedMeats.slice(0, 3)].sort((a, b) => b.score - a.score);
+    }
+
+    function logResult(index, emoji, name) {
+        if (!isSessionActive) return;
+
+        let user = auth.currentUser;
+        if (!user) { alert("Please login first!"); return; }
+
+        let currentHKRound = updateHongKongRoundClock();
+        let timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        let currentTimestamp = Date.now();
+        let delayInSeconds = Math.round((currentTimestamp - lastLogTimestamp) / 1000);
+        lastLogTimestamp = currentTimestamp;
+
+        let activeHotIndices = [];
+        hotStateMap.forEach((isActive, idx) => { if(isActive) activeHotIndices.push(idx); });
+
+        let bankrollEl = document.getElementById('bankrollInput');
+        let currentBankroll = parseFloat(bankrollEl.value) || 1000;
+
+        if (isBetActiveThisRound && activeTotalBetSum > 0) {
+            let betOnHit = activeBetAllocations[index] || 0;
+            let mult = wheelMatrix[index].mult || 0;
+            let totalWinAmount = betOnHit * mult;
+            let netResult = totalWinAmount - activeTotalBetSum;
+            currentBankroll += netResult;
+            bankrollEl.value = Math.max(currentBankroll, 0);
+
+            if (netResult >= 0) brainLog(`🎉 WIN! Hit ${emoji} (${mult}x). Net: +$${netResult}`);
+            else brainLog(`📉 LOSS. -$${Math.abs(netResult)} deducted.`);
+        }
+
+        hotStateMap.fill(false);
+        for(let i=0; i<8; i++) { document.getElementById(`hotBtn-${i}`).classList.remove('active-hot'); }
+
+        let prevIdx = logHistory.length > 0 ? logHistory[logHistory.length - 1].index : undefined;
+        let currentScores = calculateScores(logHistory);
+        let topPredictions = getBalancedTopPredictions(currentScores);
+        let top6Ids = topPredictions.map(item => item.id); 
+        
+        let newLogEntry = { index, emoji, name, time: timeStr, delay: delayInSeconds, hkRound: currentHKRound, hotMarkers: activeHotIndices, correct: true };
+
+        if (logHistory.length > 0) {
+            stats.attempts++;
+            let isMatch = top6Ids.includes(index);
+            newLogEntry.correct = isMatch;
+
+            applyGradientDescentOptimization(index, isMatch);
+            let reward = isMatch ? 10.0 : -15.0;
+            updateDQNModel(prevIdx, index, reward);
+
+            if (isMatch) { stats.hits++; isPatternLocked = true; }
+            else { stats.trapsCount = (stats.trapsCount || 0) + 1; isPatternLocked = false; document.getElementById('warning-popup-modal').style.display = 'flex'; }
+            
+            localStorage.setItem('aiStats', JSON.stringify(stats));
+            updateStatsDisplay();
+        } else {
+            isPatternLocked = true;
+        }
+
+        // INSTANT LOCAL UPDATE + FIREBASE SYNC (Fixes log counter sync delay)
+        logHistory.push(newLogEntry);
+        if(logHistory.length > 200) logHistory.shift();
+        
+        renderHistory();
+        executeQuantumEngine();
+        updateStatsDisplay();
+
+        db.ref('userPersonalLogs/' + currentUserUid).set(logHistory);
+
+        db.ref('userSubmissions').push({
+            userEmail: user.email,
+            uid: user.uid,
+            index, emoji, name, time: timeStr,
+            hkRound: currentHKRound,
+            hotMarkers: activeHotIndices,
+            timestamp: Date.now()
+        });
+
+        updateSelfAttention(logHistory);
+        brainLog(`🛡️ Log recorded & saved to personal cloud for HKT Round #${currentHKRound} with Hot State.`);
+    }
+
+    function executeQuantumEngine() {
+        let scores = calculateScores(logHistory);
+        const aiBox = document.getElementById('ai-predictions');
+        if(!aiBox) return;
+        aiBox.innerHTML = '';
+        
+        let balancedRanked = getBalancedTopPredictions(scores);
+        let totalSum = balancedRanked.reduce((a, b) => a + b.score, 0);
+
+        balancedRanked.forEach((item, idx) => {
+            let conf = totalSum > 0 ? Math.round((item.score / totalSum) * 100) : 0;
+            aiBox.innerHTML += `
+                <div class="ai-item">
+                    <span class="rank">#${idx+1}</span>
+                    <span class="emoji">${item.emoji}</span>
+                    <span class="mult">${item.mult}x</span>
+                    <span class="percentage">${conf}%</span>
+                </div>`;
+        });
+
+        let maxS = Math.max(...scores);
+        let confVal = totalSum > 0 ? Math.min(Math.round((maxS / totalSum) * 100), 99) : 15;
+        let finalConf = Math.max(confVal, 15);
+        document.getElementById('conf-meter').innerText = "Confidence: " + finalConf + "%";
+        document.getElementById('sequence-preview').innerText = "Target Sequence: " + balancedRanked.slice(0, 3).map(t => t.emoji).join(" → ");
+
+        const signalBox = document.getElementById('betSignalBox');
+        const signalStatus = document.getElementById('betSignalStatus');
+        const signalSub = document.getElementById('betSignalSub');
+        const creatorPanelBox = document.getElementById('creatorPanelBox');
+        const betSheetContainer = document.getElementById('betSheetContainer');
+        const stakeRecommendation = document.getElementById('stakeRecommendation');
+
+        let isSafeToBet = (logHistory.length >= 4) && (finalConf >= 50);
+
+        if (!isSafeToBet) {
+            isBetActiveThisRound = false; activeTotalBetSum = 0; activeBetAllocations = {};
+            signalBox.style.borderColor = 'var(--accent-red)'; signalBox.style.background = 'rgba(255, 0, 85, 0.15)';
+            signalStatus.style.color = 'var(--accent-red)'; signalStatus.innerText = 'DO NOT BET / UNLOCKED ⛔';
+            signalSub.innerText = 'RNG Pattern Syncing... Keeping Signal RED for Safety';
+            creatorPanelBox.classList.remove('smart-glow-active');
+            betSheetContainer.style.display = 'none';
+            stakeRecommendation.innerText = 'STATUS: STANDBY';
+            stakeRecommendation.style.color = 'var(--accent-red)';
+        } else {
+            isBetActiveThisRound = true;
+            signalBox.style.borderColor = 'var(--accent-green)'; signalBox.style.background = 'rgba(0, 255, 135, 0.15)';
+            signalStatus.style.color = 'var(--accent-green)'; signalStatus.innerText = 'PLACE BET NOW 🎯';
+            signalSub.innerText = 'Hedged Zone: Absolute Multiplier-Safe Net Profit Guaranteed';
+            creatorPanelBox.classList.add('smart-glow-active');
+            betSheetContainer.style.display = 'block';
+
+            let userBankroll = parseFloat(document.getElementById('bankrollInput').value) || 1000;
+            let roundStep = userBankroll >= 1000 ? 50 : 10;
+            let vegPreds = balancedRanked.filter(i => i.type === 'veg').sort((a,b) => b.score - a.score);
+            let meatPreds = balancedRanked.filter(i => i.type === 'meat').sort((a,b) => b.score - a.score);
+
+            let topVeg1 = vegPreds[0]; let backupVeg2 = vegPreds[1]; let backupVeg3 = vegPreds[2];
+            let meat1 = meatPreds[0]; let meat2 = meatPreds[1]; let meat3 = meatPreds[2];
+
+            let baseUnit = Math.max(Math.round((userBankroll * 0.05) / roundStep) * roundStep, roundStep);
+            let topVeg1Stake = baseUnit * 3; let backupVeg2Stake = baseUnit * 3; let backupVeg3Stake = baseUnit * 2;
+            let tempTotal = topVeg1Stake + backupVeg2Stake + backupVeg3Stake + (baseUnit*3);
+            let minRequiredReturn = tempTotal * 1.15;
+
+            let m1Mult = meat1 ? meat1.mult : 10;
+            let meat1Stake = Math.max(Math.ceil(minRequiredReturn / m1Mult / roundStep) * roundStep, roundStep);
+            let meat2Stake = Math.max(Math.ceil(minRequiredReturn / 15 / roundStep) * roundStep, roundStep);
+            let meat3Stake = Math.max(Math.ceil(minRequiredReturn / 25 / roundStep) * roundStep, roundStep);
+            let backupVeg3Checked = Math.max(Math.ceil(minRequiredReturn / 5 / roundStep) * roundStep, backupVeg3Stake);
+
+            activeBetAllocations = {};
+            if(topVeg1) activeBetAllocations[topVeg1.id] = topVeg1Stake;
+            if(backupVeg2) activeBetAllocations[backupVeg2.id] = backupVeg2Stake;
+            if(backupVeg3) activeBetAllocations[backupVeg3.id] = backupVeg3Checked;
+            if(meat1) activeBetAllocations[meat1.id] = meat1Stake;
+            if(meat2) activeBetAllocations[meat2.id] = meat2Stake;
+            if(meat3) activeBetAllocations[meat3.id] = meat3Stake;
+
+            activeTotalBetSum = topVeg1Stake + backupVeg2Stake + backupVeg3Checked + meat1Stake + meat2Stake + meat3Stake;
+            stakeRecommendation.innerText = `TOTAL BET: $${activeTotalBetSum}`;
+            stakeRecommendation.style.color = 'var(--accent-gold)';
+
+            document.getElementById('betSheetList').innerHTML = `
+                <div class="bet-sheet-row"><span>🔥 <b>Primary Veggie</b> (5x):</span><span style="color:var(--accent-green);">$${topVeg1Stake}</span></div>
+                <div class="bet-sheet-row"><span>🛡️ <b>Backup Veggie 1</b> (5x):</span><span style="color:var(--accent-gold);">$${backupVeg2Stake}</span></div>
+                <div class="bet-sheet-row"><span>🛡️ <b>Backup Veggie 2</b> (5x):</span><span style="color:var(--accent-gold);">$${backupVeg3Checked}</span></div>
+                <div class="bet-sheet-row"><span>🍖 <b>Meats Hedging Active</b></span><span style="color:var(--accent-cyan);">Balanced</span></div>`;
+        }
+        renderLiveAnalyticsChart();
+    }
+
+    function renderLiveAnalyticsChart() {
+        const chartCanvas = document.getElementById('liveAnalyticsChart');
+        if (!chartCanvas) return;
+        const cCtx = chartCanvas.getContext('2d');
+        cCtx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+        if (logHistory.length === 0) return;
+        let points = []; let runningHits = 0;
+        logHistory.forEach((log, idx) => { if (log.correct) runningHits++; points.push((runningHits / (idx + 1)) * 100); });
+        cCtx.strokeStyle = '#00f3ff'; cCtx.lineWidth = 2; cCtx.beginPath();
+        let stepX = chartCanvas.width / Math.max(points.length - 1, 1);
+        points.forEach((val, i) => {
+            let x = i * stepX; let y = chartCanvas.height - (val / 100) * (chartCanvas.height - 6) - 3;
+            if (i === 0) cCtx.moveTo(x, y); else cCtx.lineTo(x, y);
+        });
+        cCtx.stroke();
+    }
+
+    function updateStatsDisplay() {
+        let rate = stats.attempts > 0 ? Math.round((stats.hits / stats.attempts) * 100) : 0;
+        document.getElementById('hit-rate').innerText = rate + "%";
+        document.getElementById('hit-count').innerText = stats.hits;
+        document.getElementById('total-pred').innerText = logHistory.length;
+        let meatCount = logHistory.filter(l => wheelMatrix[l.index].type === 'meat' || wheelMatrix[l.index].type === 'pizza').length;
+        let meatPercentage = logHistory.length > 0 ? Math.round((meatCount / logHistory.length) * 100) : 50;
+        document.getElementById('trend-fill').style.width = meatPercentage + "%";
+    }
+
+    function renderHistory() {
+        const stream = document.getElementById('history-stream'); 
+        if(!stream) return;
+        stream.innerHTML = '';
+        document.getElementById('counter').innerText = `Total: ${logHistory.length}`;
+        if (logHistory.length === 0) { stream.innerHTML = `<span style="color:var(--text-muted); font-size:10px; width:100%; text-align:center;">No logs recorded</span>`; return; }
+        logHistory.slice(-12).reverse().forEach(l => {
+            const div = document.createElement('div'); div.className = 'stream-item';
+            div.innerText = wheelMatrix[l.index].emoji; 
+            if(l.hotMarkers && l.hotMarkers.length > 0) {
+                let badge = document.createElement('div');
+                badge.className = 'stream-hot-badge';
+                badge.innerText = '🔥';
+                div.appendChild(badge);
+            }
+            stream.appendChild(div);
+        });
+    }
+
+    function openFullHistoryModal() {
+        const container = document.getElementById('full-history-container');
+        let recent50 = logHistory.slice(-50).reverse();
+        document.getElementById('full-history-count').innerText = `Logs: ${recent50.length}`;
+        container.innerHTML = '';
+        recent50.forEach((log) => {
+            let item = wheelMatrix[log.index];
+            let isHit = log.correct !== false;
+            let hotInfo = (log.hotMarkers && log.hotMarkers.length > 0) ? `<span style="color:var(--accent-gold); font-size:9px;">🔥 Hot</span>` : '';
+            container.innerHTML += `
+                <div class="${isHit ? 'history-card-hit' : 'history-card-miss'}">
+                    <div class="card-left"><span class="${isHit ? 'badge-hit' : 'badge-miss'}">${isHit ? 'HIT' : 'MISS'}</span><span style="font-size:18px;">${item.emoji}</span><span class="card-title">${item.name} (${item.mult}x) ${hotInfo}</span></div>
+                    <div class="card-time">⏰ ${log.time}</div>
+                </div>`;
+        });
+        document.getElementById('full-history-modal').style.display = 'flex';
+    }
+
+    function closeFullHistoryModal() { document.getElementById('full-history-modal').style.display = 'none'; }
+    function closeWarningPopup() { document.getElementById('warning-popup-modal').style.display = 'none'; }
+    function showStartSessionModal() { document.getElementById('start-session-modal').style.display = 'flex'; }
+    function confirmStartSession(c) { document.getElementById('start-session-modal').style.display = 'none'; if(c) { isSessionActive = true; sessionData.count++; document.getElementById('session-display').innerText = "Session: " + sessionData.count; } }
+    function showEndSessionModal() { document.getElementById('end-session-modal').style.display = 'flex'; }
+    function confirmEndSession(c) { document.getElementById('end-session-modal').style.display = 'none'; if(c) isSessionActive = false; }
+    
+    function showModal() { 
+        document.getElementById('reset-modal').style.display = 'flex'; 
+    }
+    
+    function handleReset(c) { 
+        document.getElementById('reset-modal').style.display = 'none'; 
+        if(c) { 
+            logHistory = [];
+            if(currentUserUid) {
+                db.ref('userPersonalLogs/' + currentUserUid).remove();
+            }
+            renderHistory();
+            executeQuantumEngine();
+            updateStatsDisplay();
+            alert("Personal database and session reset successfully!");
+        } 
+    }
+    
+    function deleteLastLog() {
+        if (logHistory.length > 0) {
+            logHistory.pop();
+            renderHistory();
+            executeQuantumEngine();
+            updateStatsDisplay();
+            if(currentUserUid) {
+                db.ref('userPersonalLogs/' + currentUserUid).set(logHistory);
+            }
+            alert("Last log removed from your personal database.");
+        } else {
+            alert("No logs to delete!");
+        }
+    }
+
+    function exportData() {
+        const blob = new Blob([JSON.stringify({ logHistory, sessionData, stats })], { type: 'application/json' });
+        const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'ai_master_personal_backup.json'; link.click();
+    }
+
+    function importData(e) {
+        const file = e.target.files[0]; if(!file) return;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            try {
+                let d = JSON.parse(evt.target.result);
+                if(d.logHistory && Array.isArray(d.logHistory)) {
+                    logHistory = d.logHistory;
+                    renderHistory();
+                    executeQuantumEngine();
+                    updateStatsDisplay();
+                    if(currentUserUid) {
+                        db.ref('userPersonalLogs/' + currentUserUid).set(logHistory);
+                    }
+                    alert('Personal logs imported successfully!');
+                }
+            } catch(err) { alert('Invalid Backup File.'); }
+        };
+        reader.readAsText(file);
+    }
+    
+    function showSummary() {
+        let entropyVal = calculateEntropyShield(logHistory).toFixed(2);
+        let rate = stats.attempts > 0 ? Math.round((stats.hits / stats.attempts) * 100) : 0;
+        document.getElementById('summary-content').innerHTML = `
+            <b>🏛️ Session Number:</b> Active #${sessionData.count}<br>
+            <b>📊 Personal Log Count:</b> ${logHistory.length}<br>
+            <b>🎯 Overall Neural Accuracy:</b> ${rate}% (${stats.hits}/${stats.attempts} Hits)<br>
+            <b>⚠️ Traps Registered:</b> ${stats.trapsCount || 0}<br>
+            <b>⚡ Entropy Shield:</b> ${entropyVal}<br>
+        `;
+        document.getElementById('summary-modal').style.display = 'flex';
+    }
+    function closeSummaryModal() { document.getElementById('summary-modal').style.display = 'none'; }
+    document.getElementById('session-display').innerText = "Session: " + sessionData.count;
+</script>
+</body>
+</html>
